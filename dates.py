@@ -2,7 +2,9 @@ from datetime import datetime, timedelta
 import numpy as np
 from configparser import ConfigParser
 import requests
-import random
+import re
+import urllib3
+import logging
 
 def find_id(date: str):
     """
@@ -12,6 +14,9 @@ def find_id(date: str):
     id = get_id_by_date(date)
     actual_date = get_date_by_id(id)
     prev_dd = 0
+
+    if actual_date is None:
+        return None
 
     while date != actual_date:
         date_diff = get_business_days_diff(date, actual_date)
@@ -55,12 +60,26 @@ def get_date_by_id(id: int) -> datetime:
     download_url = config.get('links', 'download_url')
     TC_url = download_url + str(id) + "/TC.txt"
 
+    # prevent logging requests
+    logging.getLogger("requests").setLevel(logging.WARNING)
+    logging.getLogger("urllib3").setLevel(logging.WARNING)
+    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
     response = requests.get(TC_url)
 
     content_disposition = response.headers.get('Content-Disposition')
-    date = content_disposition.split("_")[1].split(".")[0]
 
-    return date
+    if content_disposition is None:
+        return None
+    
+    # Extract date from filename in URL
+    date_pattern = r"\d{8}"
+    date_match = re.search(date_pattern, content_disposition)
+
+    if date_match:
+        return date_match.group()
+
+    return None
 
 def get_date_diff(date_str1: str, date_str2: str) -> int:
     date1 = datetime.strptime(date_str1, "%Y%m%d")
