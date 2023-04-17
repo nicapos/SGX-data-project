@@ -34,7 +34,7 @@ def get_id_by_date(date: str) -> int:
     config = ConfigParser()
     config.read('config.ini')
 
-    ref_id = config.get('searchref', 'id')
+    ref_id = config.getint('searchref', 'id')
     ref_date = config.get('searchref', 'date')
 
     start = datetime.strptime(ref_date, '%Y%m%d').date()
