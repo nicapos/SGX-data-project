@@ -8,7 +8,7 @@ import logging
 import urllib3
 import argparse
 
-from dates import find_id, get_business_days_diff
+from dates import find_id, find_relative_id, get_business_days_diff, get_date_diff, get_date_by_id
 
 FILENAMES = ["WEBPXTICK_DT.zip", "TickData_structure.dat", "TC.txt", "TC_structure.dat"]
 
@@ -51,36 +51,63 @@ def download_file(filename: str, id: int, date: str):
         file_path = os.path.join(date_dir, dl_filename)
 
         if os.path.exists(file_path):
-            raise Exception(f"File '{dl_filename}' already exists.")
+            raise Exception(f"\tFile '{dl_filename}' already exists.")
         else:
             with open(file_path, 'wb') as file:
                 file.write(response.read())
 
 def download_day_files(param_date):
     date = param_date
-    id = find_id(date)
+    id = find_relative_id(date)
 
-    while id is None:
-        print(f'Data from {reformat_date(date)} is not available. Moving to previous day...')
-        day_before = datetime.strptime(date, '%Y%m%d') - timedelta(days=1)
-        date = day_before.strftime("%Y%m%d")
-        
-        id = find_id(date)
-
-    logging.info(f'Downloading data from {reformat_date(date)}:')
+    logging.info(f"Preparing to download data from {reformat_date(date)}...")
 
     for index, filename in enumerate(FILENAMES):
         try:
-            logging.info(f'Downloading {filename} ({index+1}/{len(FILENAMES)})...')
             download_file(filename, id, date)
+            logging.info(f'Downloaded {filename} ({index+1}/{len(FILENAMES)})...')
         except Exception as e:
             logging.error(e)
 
     logging.info(f"Export complete! Check ./output/{reformat_date(date)} for files")
 
 def batch_download_files(start_date, end_date):
-    pass
+    start_id = find_relative_id(start_date)
+    end_id = find_relative_id(end_date)
 
+    total = end_id - start_id + 1
+
+    logging.info(f"Preparing to download data from {reformat_date(start_date)} to {reformat_date(end_date)}...")
+    
+    for id in range(start_id, end_id+1):
+        date = get_date_by_id(id)
+
+        for filename in FILENAMES:
+            try:
+                download_file(filename, id, date)
+            except Exception as e:
+                logging.error(e)
+
+        logging.info(f"Downloaded data from {reformat_date(date)} ({id-start_id+1}/{total})...")
+
+    logging.info(f"Export complete! Check ./output/ for files")
+    
+
+def validate_date_param(date: str, param_name:str):
+    try:
+        datetime.strptime(date, '%Y%m%d')
+
+        config = ConfigParser()
+        config.read('config.ini')
+        earliest_date = config.get('searchref', 'begin_date')
+
+        if get_date_diff(date, earliest_date) < 0:
+            print(f'ERROR: {param_name} out of range. Date must be on or after {reformat_date(earliest_date)}.')
+            exit()
+
+    except ValueError:
+        print(f'ERROR: Invalid {param_name} (passed \'{date}\')')
+        exit()
 
 if __name__ == "__main__":
     logging.basicConfig(
@@ -105,28 +132,41 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="SGX Data Downloader")
     parser.add_argument('--start-date', type=str, help='Specify a date in the format YYYYMMDD', default=default_start_date)
     parser.add_argument('--end-date', type=str, help='Specify a date in the format YYYYMMDD', default=default_end_date)
+    parser.add_argument('--on-date', type=str, help='Download data from a single date', default=None)
     parser.add_argument('--today', action='store_true', help='Download only today\'s data')
 
     args = parser.parse_args()
 
     start_date = args.start_date
     end_date = args.end_date
+    single_date = args.on_date
     use_today = args.today
+
+    validate_date_param(start_date, 'start date')
+    validate_date_param(end_date, 'end date')
+
+    if single_date is not None:
+        validate_date_param(single_date, 'date')
 
     total_days = get_business_days_diff(start_date, end_date) + 1
 
     if use_today:
         download_day_files(today_date)
         
+    elif single_date is not None:
+        download_day_files(single_date)
+    
     elif total_days == 1:
         download_day_files(start_date)
-    
-    elif total_days > 1:
-        # download from range of dates
+
+    elif total_days >= 100:
         proceed = input(f"WARNING: Estimated {total_days} days of data will be downloaded. This is a large range. Proceed? (Y/N) ")
         
         if proceed == 'Y' or proceed == 'y':
             batch_download_files(start_date, end_date)
+
+    elif total_days > 1:
+        batch_download_files(start_date, end_date)
 
     else:
         if start_date == default_start_date: # before - today is negative

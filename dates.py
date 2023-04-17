@@ -9,7 +9,7 @@ import logging
 def find_id(date: str):
     """
     date (str): Date in the format 'YYYYMMDD'.
-    Returns the ACTUAL id of the given param_date (if valid)
+    Returns the ACTUAL id of the given param_date (if valid), None if no id for given date
     """
     id = get_id_by_date(date)
     actual_date = get_date_by_id(id)
@@ -18,7 +18,7 @@ def find_id(date: str):
     if actual_date is None:
         return None
 
-    while date != actual_date:
+    while date != actual_date and prev_dd != 0:
         date_diff = get_business_days_diff(date, actual_date)
 
         if prev_dd + date_diff == 0: # to prevent infinite loop in case of order mismatch
@@ -28,6 +28,26 @@ def find_id(date: str):
 
         prev_dd = date_diff
         actual_date = get_date_by_id(id)
+
+    return id
+
+def find_relative_id(date: str):
+    """
+    date (str): Date in the format 'YYYYMMDD'.
+    Returns the id of the given param_date (if any), else returns the id from the nearest earlier date
+    """
+    id = find_id(date)
+
+    config = ConfigParser()
+    config.read('config.ini')
+    earliest_date = config.get('searchref', 'begin_date')
+
+
+    while id is None and get_date_diff(date, earliest_date) > 0:
+        day_before = datetime.strptime(date, '%Y%m%d') - timedelta(days=1)
+        date = day_before.strftime("%Y%m%d")
+        
+        id = find_id(date)
 
     return id
 
