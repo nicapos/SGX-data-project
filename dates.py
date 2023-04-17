@@ -122,3 +122,5 @@ def get_business_days_diff(date_str1: str, date_str2: str):
     num_business_days = np.busday_count(start_date_np, end_date_np, weekmask="Mon Tue Wed Thu Fri")
     return num_business_days
     
+def reformat_date(date_Ymd: str):
+    return datetime.strptime(date_Ymd, '%Y%m%d').strftime('%Y-%m-%d')
