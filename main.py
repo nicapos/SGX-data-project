@@ -25,18 +25,6 @@ def validate_date_param(date: str, param_name:str):
         exit()
 
 if __name__ == "__main__":
-    logging.basicConfig(
-        level=logging.NOTSET,
-        format='%(asctime)s - %(message)s', 
-        datefmt='%d-%b-%y %H:%M:%S'
-    )
-
-    # prevent logging requests
-    logging.getLogger("requests").setLevel(logging.WARNING)
-    logging.getLogger("urllib3").setLevel(logging.WARNING)
-    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-
-    # setup arguments
     config = ConfigParser()
     config.read('config.ini')
 
@@ -49,6 +37,7 @@ if __name__ == "__main__":
     parser.add_argument('--end-date', type=str, help='Specify a date in the format YYYYMMDD', default=default_end_date)
     parser.add_argument('--on-date', type=str, help='Download data from a single date', default=None)
     parser.add_argument('--today', action='store_true', help='Download only today\'s data')
+    parser.add_argument('-o', type=str, help='Specify the filename for the output log', default=None)
 
     args = parser.parse_args()
 
@@ -56,6 +45,7 @@ if __name__ == "__main__":
     end_date = args.end_date
     single_date = args.on_date
     use_today = args.today
+    output_log = args.o
 
     validate_date_param(start_date, 'start date')
     validate_date_param(end_date, 'end date')
@@ -63,6 +53,20 @@ if __name__ == "__main__":
     if single_date is not None:
         validate_date_param(single_date, 'date')
 
+    # setup logger
+    logging.basicConfig(
+        filename=output_log,
+        level=logging.NOTSET,
+        format='%(asctime)s - %(message)s', 
+        datefmt='%d-%b-%y %H:%M:%S'
+    )
+
+    # prevent logging requests
+    logging.getLogger("requests").setLevel(logging.WARNING)
+    logging.getLogger("urllib3").setLevel(logging.WARNING)
+    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+    # prep data download
     total_days = get_business_days_diff(start_date, end_date) + 1
 
     if use_today:
