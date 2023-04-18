@@ -9,20 +9,19 @@ from dates import *
 
 FILENAMES = ["WEBPXTICK_DT.zip", "TickData_structure.dat", "TC.txt", "TC_structure.dat"]
 
+def validate_file_path(filepath):
+    parts = filepath.split('/')
+    filename = parts.pop()
+
+    # Create the directories if they do not exist
+    os.makedirs(os.path.join(*parts), exist_ok=True)
+
+    return os.path.join(*parts, filename)
+
 def download_file(filename: str, id: int, date: str):
-    # Setup output directory
-    current_dir = os.getcwd()
-    output_dir = os.path.join(current_dir, 'output')
-
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
-
-    # Setup date directory inside output directory
+    # Setup directory for downloads
     formatted_date = reformat_date(date)
-    date_dir = os.path.join(output_dir, formatted_date)
-
-    if not os.path.exists(date_dir):
-        os.makedirs(date_dir)
+    date_dir = '/output/' + formatted_date
 
     # Setup download url
     config = ConfigParser()
@@ -42,7 +41,7 @@ def download_file(filename: str, id: int, date: str):
             raise Exception(f'Error downloading {filename}.')
 
         dl_filename = content_disposition.split('filename=')[1]
-        file_path = os.path.join(date_dir, dl_filename)
+        file_path = validate_file_path(date_dir + '/' + dl_filename)
 
         if os.path.exists(file_path):
             raise Exception(f"\tFile '{dl_filename}' already exists.")
