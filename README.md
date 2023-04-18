@@ -45,21 +45,21 @@ To use the program, run [`main.py`](./main.py) with the following optional argum
 
 | args | Description |
 | --- | --- |
-| `--start-date` | Specify the start date for downloading data in the format YYYYMMDD. |
-| `--end-date` | Specify the end date for downloading data in the format YYYYMMDD. |
-| `--on-date` | Download data for a single date specified in the format YYYYMMDD. |
+| `--start-date` | Specify the start date for downloading data in the format YYYY-MM-DD. |
+| `--end-date` | Specify the end date for downloading data in the format YYYY-MM-DD. |
+| `--on-date` | Download data for a single date specified in the format YYYY-MM-DD. |
 | `--today` | Download data only for today's date. |
 | `-o` | Specify the filename for the output log. |
 
 #### Example usage
 1. Download data for a specific date:
 ```bash
-python3 main.py --on-date 20230410
+python3 main.py --on-date 2023-04-10
 ```
 
 2. Download data for a date range:
 ```bash
-python3 main.py --start-date 20230401 --end-date 20230410
+python3 main.py --start-date 2023-04-01 --end-date 2023-04-10
 ```
 
 3. Download only today's data:
@@ -69,5 +69,5 @@ python3 main.py --today
 
 4. Download data for a date range and specify an output log:
 ```bash
-python3 main.py --start-date 20230401 --end-date 20230410 -o output.log
+python3 main.py --start-date 2023-04-01 --end-date 2023-04-10 -o logs/output.log
 ```
