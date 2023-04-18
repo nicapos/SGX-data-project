@@ -14,7 +14,8 @@ def validate_file_path(filepath):
     filename = parts.pop()
 
     # Create the directories if they do not exist
-    os.makedirs(os.path.join(*parts), exist_ok=True)
+    if len(parts):
+        os.makedirs(os.path.join(*parts), exist_ok=True)
 
     return os.path.join(*parts, filename)
 
@@ -55,14 +56,23 @@ def download_day_files(param_date):
 
     logging.info(f"Preparing to download data from {reformat_date(date)}...")
 
+    skipped_downloads = []
+
     for index, filename in enumerate(FILENAMES):
         try:
             download_file(filename, id, date)
-            logging.info(f'Downloaded {filename} ({index+1}/{len(FILENAMES)})...')
+            logging.info(f'({index+1}/{len(FILENAMES)}) Downloaded {filename}')
         except Exception as e:
-            logging.error(e)
+            if 'already exists' in str(e):
+                skipped_downloads.append(filename)
+            else:
+                logging.error(e)
 
-    logging.info(f"Export complete! Check ./output/{reformat_date(date)} for files")
+    message = 'Export complete! ' if len(skipped_downloads) < len(FILENAMES) else ''
+    if len(skipped_downloads) > 0:
+        message += f'Skipped downloading {len(skipped_downloads)} files (already exists). '
+
+    logging.info(message + f"Check ./output/{reformat_date(date)} for files")
 
 def batch_download_files(start_date, end_date):
     start_id = find_relative_id(start_date)
@@ -75,13 +85,24 @@ def batch_download_files(start_date, end_date):
     for id in range(start_id, end_id+1):
         date = get_date_by_id(id)
 
+        skipped_downloads = []
+
         for filename in FILENAMES:
             try:
                 download_file(filename, id, date)
             except Exception as e:
-                logging.error(e)
+                if 'already exists' in str(e):
+                    skipped_downloads.append(filename)
+                else:
+                    logging.error(e)
 
-        logging.info(f"Downloaded data from {reformat_date(date)} ({id-start_id+1}/{total})...")
+        total_downloads = len(FILENAMES) - len(skipped_downloads)
+        
+        message = f'Downloaded {total_downloads} files from {reformat_date(date)} '
+        if len(skipped_downloads) > 0:
+            message += f'(skipped {len(skipped_downloads)} already existing files)'
+
+        logging.info(f"({id-start_id+1}/{total}) {message}")
 
     logging.info(f"Export complete! Check ./output/ for files")
     
